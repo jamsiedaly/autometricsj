@@ -2,6 +2,7 @@ package com.autometrics.bindings;
 
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -10,15 +11,18 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Aspect
 @Component
 public class AutometricsAspect {
 
     private final MeterRegistry registry;
-    private final Gauge gauge;
+    private final Gauge artifactInfoGauge;
 
     public AutometricsAspect(MeterRegistry registry, Environment environment) throws IOException {
         Properties properties = new Properties();
@@ -29,7 +33,7 @@ public class AutometricsAspect {
         Optional<String> version = getVersion(environment);
 
         this.registry = registry;
-        this.gauge = Gauge.builder("build_info", () -> 1.0)
+        this.artifactInfoGauge = Gauge.builder("build_info", () -> 1.0)
                 .tags("version", version.orElse("unknown"))
                 .tags("commit", gitCommitId.orElse("unknown"))
                 .tags("branch", gitBranch.orElse("unknown"))
@@ -89,5 +93,20 @@ public class AutometricsAspect {
                 throw new RuntimeException(throwable);
             }
         });
+    }
+
+    @Around("@annotation(Autometrics)")
+    public Object methodConcurrentCalls(ProceedingJoinPoint joinPoint) throws Throwable {
+        String function = joinPoint.getSignature().getName();
+        String module = joinPoint.getSignature().getDeclaringType().getPackageName();
+
+        try {
+            Object proceed = joinPoint.proceed();
+            registry.counter( "function.calls.concurrent","function", function, "module", module).increment();
+            return proceed;
+        } catch (Throwable throwable) {
+            registry.counter("function.calls.count", "function", function, "module", module).increment(-1.0);
+            throw throwable;
+        }
     }
 }
