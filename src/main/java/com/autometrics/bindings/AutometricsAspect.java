@@ -101,8 +101,9 @@ public class AutometricsAspect {
             registry.counter( "function.calls.concurrent","function", function, "module", module).increment();
             return proceed;
         } catch (Throwable throwable) {
-            registry.counter("function.calls.count", "function", function, "module", module).increment(-1.0);
             throw throwable;
+        } finally {
+            registry.counter("function.calls.count", "function", function, "module", module).increment(-1.0);
         }
     }
 }
