@@ -10,16 +10,19 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Aspect
 @Component
 public class AutometricsAspect {
 
     private final MeterRegistry registry;
-    private final Gauge artifactInfoGauge;
 
+    private final Map<Gauge, AtomicInteger> concurrencyGauges = new HashMap<>();
     public AutometricsAspect(MeterRegistry registry, Environment environment) throws IOException {
         Properties properties = new Properties();
         properties.load(getClass().getClassLoader().getResourceAsStream("git.properties"));
@@ -29,7 +32,7 @@ public class AutometricsAspect {
         Optional<String> version = getVersion(environment);
 
         this.registry = registry;
-        this.artifactInfoGauge = Gauge.builder("build_info", () -> 1.0)
+        Gauge.builder("build_info", () -> 1.0)
                 .tags("version", version.orElse("unknown"))
                 .tags("commit", gitCommitId.orElse("unknown"))
                 .tags("branch", gitBranch.orElse("unknown"))
@@ -61,12 +64,13 @@ public class AutometricsAspect {
         }
     }
 
-
     @Around("@annotation(Autometrics)")
     public Object methodCallCount(ProceedingJoinPoint joinPoint) throws Throwable {
         String function = joinPoint.getSignature().getName();
         String module = joinPoint.getSignature().getDeclaringType().getPackageName();
         String caller = "";
+        var concurrencyGauge = findGaugeForFunction(function, module);
+        concurrencyGauges.get(concurrencyGauge).incrementAndGet();
         try {
             Object proceed = joinPoint.proceed();
             registry.counter( "function.calls.count","function", function, "module", module, "result", "ok", "caller", caller).increment();
@@ -74,6 +78,8 @@ public class AutometricsAspect {
         } catch (Throwable throwable) {
             registry.counter("function.calls.count", "function", function, "module", module, "result", "error", "caller", caller).increment();
             throw throwable;
+        } finally {
+            concurrencyGauges.get(concurrencyGauge).decrementAndGet();
         }
     }
 
@@ -91,19 +97,20 @@ public class AutometricsAspect {
         });
     }
 
-    @Around("@annotation(Autometrics)")
-    public Object methodConcurrentCalls(ProceedingJoinPoint joinPoint) throws Throwable {
-        String function = joinPoint.getSignature().getName();
-        String module = joinPoint.getSignature().getDeclaringType().getPackageName();
-
-        try {
-            Object proceed = joinPoint.proceed();
-            registry.counter( "function.calls.concurrent","function", function, "module", module).increment();
-            return proceed;
-        } catch (Throwable throwable) {
-            throw throwable;
-        } finally {
-            registry.counter("function.calls.count", "function", function, "module", module).increment(-1.0);
+    public Gauge findGaugeForFunction(String function, String module) {
+        var potentialGauge = concurrencyGauges.keySet().stream()
+                .filter(gauge -> gauge.getId().getTag("function").equals(function) && gauge.getId().getTag("module").equals(module))
+                .findFirst();
+        if (potentialGauge.isPresent()) {
+            return potentialGauge.get();
+        } else {
+            var concurrentCalls = new AtomicInteger(0);
+            var newGauge =Gauge.builder("function.calls.concurrent", () -> concurrentCalls.get())
+                    .tags("function", function)
+                    .tags("module", module)
+                    .register(registry);
+            this.concurrencyGauges.put(newGauge, concurrentCalls);
+            return newGauge;
         }
     }
 }
