@@ -70,34 +70,22 @@ public class AutometricsAspect {
     }
 
     @Around("@annotation(Autometrics)")
-    public Object methodCallCount(ProceedingJoinPoint joinPoint) throws Throwable {
-        String function = joinPoint.getSignature().getName();
-        String module = joinPoint.getSignature().getDeclaringType().getPackageName();
-        String caller = "";
-        var concurrencyGauge = findGaugeForFunction(function, module);
-        concurrencyGauges.get(concurrencyGauge).incrementAndGet();
-        try {
-            Object proceed = joinPoint.proceed();
-            registry.counter( "function.calls.count","function", function, "module", module, "result", "ok", "caller", caller).increment();
-            return proceed;
-        } catch (Throwable throwable) {
-            registry.counter("function.calls.count", "function", function, "module", module, "result", "error", "caller", caller).increment();
-            throw throwable;
-        } finally {
-            concurrencyGauges.get(concurrencyGauge).decrementAndGet();
-        }
-    }
-
-    @Around("@annotation(Autometrics)")
     public Object methodCallDuration(ProceedingJoinPoint joinPoint) {
         String function = joinPoint.getSignature().getName();
         String module = joinPoint.getSignature().getDeclaringType().getPackageName();
+        var concurrencyGauge = findGaugeForFunction(function, module);
         Timer timer = registry.timer("function.calls.duration", "function", function, "module", module);
+        concurrencyGauges.get(concurrencyGauge).incrementAndGet();
         return timer.record(() -> {
             try {
-                return joinPoint.proceed();
+                Object proceed = joinPoint.proceed();
+                registry.counter( "function.calls.count","function", function, "module", module, "result", "ok").increment();
+                return proceed;
             } catch (Throwable throwable) {
+                registry.counter("function.calls.count", "function", function, "module", module, "result", "error").increment();
                 throw new RuntimeException(throwable);
+            } finally {
+                concurrencyGauges.get(concurrencyGauge).decrementAndGet();
             }
         });
     }
