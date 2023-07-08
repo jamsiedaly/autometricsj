@@ -83,4 +83,12 @@
       </plugins>
     </pluginManagement>
   </build>
+
+  <distributionManagement>
+    <repository>
+      <id>github</id>
+      <name>GitHub autometricsj Apache Maven Packages</name>
+      <url>https://maven.pkg.github.com/autometricsj/autometricsj</url>
+    </repository>
+  </distributionManagement>
 </project>
