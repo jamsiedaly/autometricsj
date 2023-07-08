@@ -3,6 +3,7 @@ package com.autometrics.bindings;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import org.apache.commons.logging.Log;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -23,9 +24,13 @@ public class AutometricsAspect {
     private final MeterRegistry registry;
 
     private final Map<Gauge, AtomicInteger> concurrencyGauges = new HashMap<>();
-    public AutometricsAspect(MeterRegistry registry, Environment environment) throws IOException {
+    public AutometricsAspect(MeterRegistry registry, Environment environment, Log log) {
         Properties properties = new Properties();
-        properties.load(getClass().getClassLoader().getResourceAsStream("git.properties"));
+        try {
+            properties.load(getClass().getClassLoader().getResourceAsStream("git.properties"));
+        } catch (IOException e) {
+            log.warn("Could not load git.properties", e);
+        }
 
         Optional<String> gitCommitId = getCommit(properties);
         Optional<String> gitBranch = getBranch(properties);
