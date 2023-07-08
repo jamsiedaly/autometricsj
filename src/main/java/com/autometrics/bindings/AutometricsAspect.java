@@ -24,12 +24,12 @@ public class AutometricsAspect {
     private final MeterRegistry registry;
 
     private final Map<Gauge, AtomicInteger> concurrencyGauges = new HashMap<>();
-    public AutometricsAspect(MeterRegistry registry, Environment environment, Log log) {
+    public AutometricsAspect(MeterRegistry registry, Environment environment) {
         Properties properties = new Properties();
         try {
             properties.load(getClass().getClassLoader().getResourceAsStream("git.properties"));
         } catch (IOException e) {
-            log.warn("Could not load git.properties", e);
+            System.out.println("Could not load git.properties");
         }
 
         Optional<String> gitCommitId = getCommit(properties);
