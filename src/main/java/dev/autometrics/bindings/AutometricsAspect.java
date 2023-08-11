@@ -1,16 +1,14 @@
-package com.autometrics.bindings;
+package dev.autometrics.bindings;
 
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
-import org.apache.commons.logging.Log;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -28,7 +26,7 @@ public class AutometricsAspect {
         Properties properties = new Properties();
         try {
             properties.load(getClass().getClassLoader().getResourceAsStream("git.properties"));
-        } catch (IOException e) {
+        } catch (Exception e) {
             System.out.println("Could not load git.properties");
         }
 
@@ -69,7 +67,7 @@ public class AutometricsAspect {
         }
     }
 
-    @Around("@annotation(Autometrics)")
+    @Around("@annotation(dev.autometrics.bindings.Autometrics)")
     public Object methodCallDuration(ProceedingJoinPoint joinPoint) {
         String function = joinPoint.getSignature().getName();
         String module = joinPoint.getSignature().getDeclaringType().getPackageName();

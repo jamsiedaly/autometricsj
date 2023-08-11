@@ -1,4 +1,4 @@
-package com.autometrics.bindings;
+package dev.autometrics.bindings;
 
 
 import org.junit.jupiter.api.Test;
