@@ -1,14 +1,12 @@
-package com.autometrics.bindings;
-
-import org.springframework.context.annotation.Import;
+package dev.autometrics.bindings;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-@Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
-@Import(AutometricsAspect.class)
-public @interface EnableAutometrics {
+@Target(ElementType.METHOD)
+public @interface Autometrics {
+
 }
