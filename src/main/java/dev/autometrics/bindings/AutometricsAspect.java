@@ -74,16 +74,16 @@ public class AutometricsAspect {
         String module = joinPoint.getSignature().getDeclaringType().getPackageName();
         String fullFunctionName = module + "." + className + "." + function;
 
-        var concurrencyGauge = findGaugeForFunction(function, module);
+        var concurrencyGauge = findGaugeForFunction(fullFunctionName, module);
         Timer timer = registry.timer("function.calls.duration", "function", fullFunctionName, "module", module);
         concurrencyGauges.get(concurrencyGauge).incrementAndGet();
         return timer.record(() -> {
             try {
                 Object proceed = joinPoint.proceed();
-                registry.counter( "function.calls.count","function", function, "module", module, "result", "ok").increment();
+                registry.counter( "function.calls.count","function", fullFunctionName, "module", module, "result", "ok").increment();
                 return proceed;
             } catch (Throwable throwable) {
-                registry.counter("function.calls.count", "function", function, "module", module, "result", "error").increment();
+                registry.counter("function.calls.count", "function", fullFunctionName, "module", module, "result", "error").increment();
                 throw new RuntimeException(throwable);
             } finally {
                 concurrencyGauges.get(concurrencyGauge).decrementAndGet();

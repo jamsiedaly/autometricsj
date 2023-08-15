@@ -4,7 +4,7 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>com.autometrics.bindings</groupId>
+  <groupId>dev.autometrics.bindings</groupId>
   <artifactId>autometricsj</artifactId>
   <version>1.1-SNAPSHOT</version>
 
@@ -84,11 +84,11 @@
     </pluginManagement>
   </build>
 
-  <distributionManagement>
-    <repository>
-      <id>github</id>
-      <name>GitHub autometricsj Apache Maven Packages</name>
-      <url>https://maven.pkg.github.com/autometricsj/autometricsj</url>
-    </repository>
-  </distributionManagement>
+<!--  <distributionManagement>-->
+<!--    <repository>-->
+<!--      <id>github</id>-->
+<!--      <name>GitHub autometricsj Apache Maven Packages</name>-->
+<!--      <url>https://maven.pkg.github.com/autometricsj/autometricsj</url>-->
+<!--    </repository>-->
+<!--  </distributionManagement>-->
 </project>
