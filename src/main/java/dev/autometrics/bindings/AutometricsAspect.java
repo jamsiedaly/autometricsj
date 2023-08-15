@@ -61,7 +61,7 @@ public class AutometricsAspect {
 
     private Optional<String> getVersion(Environment environment) {
         if (environment.getProperty("app.version") != null) {
-            return Optional.of(environment.getProperty("app.version"));
+            return Optional.ofNullable(environment.getProperty("app.version"));
         } else {
             return Optional.empty();
         }
@@ -70,9 +70,12 @@ public class AutometricsAspect {
     @Around("@annotation(dev.autometrics.bindings.Autometrics)")
     public Object methodCallDuration(ProceedingJoinPoint joinPoint) {
         String function = joinPoint.getSignature().getName();
+        String className = joinPoint.getSignature().getDeclaringType().getSimpleName();
         String module = joinPoint.getSignature().getDeclaringType().getPackageName();
+        String fullFunctionName = module + "." + className + "." + function;
+
         var concurrencyGauge = findGaugeForFunction(function, module);
-        Timer timer = registry.timer("function.calls.duration", "function", function, "module", module);
+        Timer timer = registry.timer("function.calls.duration", "function", fullFunctionName, "module", module);
         concurrencyGauges.get(concurrencyGauge).incrementAndGet();
         return timer.record(() -> {
             try {
