@@ -6,10 +6,34 @@
 
   <groupId>dev.autometrics.bindings</groupId>
   <artifactId>autometricsj</artifactId>
-  <version>1.1-SNAPSHOT</version>
+  <version>1.2-SNAPSHOT</version>
 
   <name>autometricsj</name>
   <url>https://autometrics.dev/</url>
+  <scm>
+    <url>
+      https://github.com/jamsiedaly/autometricsj.git
+    </url>
+  </scm>
+  <description>Java/Kotlin bindings for the autometrics microframework</description>
+  <developers>
+    <developer>
+      <name>James Daly</name>
+      <email>jamsiedaly@gmail.com</email>
+      <roles>
+        <role>
+          Maintainer
+        </role>
+      </roles>
+    </developer>
+  </developers>
+  <licenses>
+      <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/licenses/MIT</url>
+      </license>
+  </licenses>
+
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -83,12 +107,76 @@
       </plugins>
     </pluginManagement>
   </build>
+  <profiles>
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>nexus-staging-maven-plugin</artifactId>
+            <version>1.6.13</version>
+            <extensions>true</extensions>
+            <configuration>
+              <serverId>ossrh</serverId>
+              <nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
+              <autoReleaseAfterClose>true</autoReleaseAfterClose>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <version>2.2.1</version>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <goals>
+                  <goal>jar-no-fork</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>2.9.1</version>
+            <executions>
+              <execution>
+                <id>attach-javadocs</id>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>1.5</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
-<!--  <distributionManagement>-->
-<!--    <repository>-->
-<!--      <id>github</id>-->
-<!--      <name>GitHub autometricsj Apache Maven Packages</name>-->
-<!--      <url>https://maven.pkg.github.com/autometricsj/autometricsj</url>-->
-<!--    </repository>-->
-<!--  </distributionManagement>-->
+
+  <distributionManagement>
+    <snapshotRepository>
+      <id>ossrh</id>
+      <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
+    </snapshotRepository>
+    <repository>
+      <id>ossrh</id>
+      <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+    </repository>
+  </distributionManagement>
 </project>
