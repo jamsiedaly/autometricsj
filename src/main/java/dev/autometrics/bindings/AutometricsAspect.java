@@ -33,13 +33,21 @@ public class AutometricsAspect {
         Optional<String> gitCommitId = getCommit(properties);
         Optional<String> gitBranch = getBranch(properties);
         Optional<String> version = getVersion(environment);
+        Optional<String> serviceName = getServiceName(environment);
 
         this.registry = registry;
         Gauge.builder("build_info", () -> 1.0)
                 .tags("version", version.orElse("unknown"))
                 .tags("commit", gitCommitId.orElse("unknown"))
                 .tags("branch", gitBranch.orElse("unknown"))
+                .tags("service.name", serviceName.orElse("unknown"))
                 .register(registry);
+    }
+
+    private Optional<String> getServiceName(Environment environment) {
+        return environment.getProperty("spring.application.name") != null ?
+                Optional.ofNullable(environment.getProperty("spring.application.name")) :
+                Optional.empty();
     }
 
     private Optional<String> getCommit(Properties properties) {
@@ -80,10 +88,10 @@ public class AutometricsAspect {
         return timer.record(() -> {
             try {
                 Object proceed = joinPoint.proceed();
-                registry.counter( "function.calls.count","function", fullFunctionName, "module", module, "result", "ok").increment();
+                registry.counter( "function.calls","function", fullFunctionName, "module", module, "result", "ok").increment();
                 return proceed;
             } catch (Throwable throwable) {
-                registry.counter("function.calls.count", "function", fullFunctionName, "module", module, "result", "error").increment();
+                registry.counter("function.calls", "function", fullFunctionName, "module", module, "result", "error").increment();
                 throw new RuntimeException(throwable);
             } finally {
                 concurrencyGauges.get(concurrencyGauge).decrementAndGet();
