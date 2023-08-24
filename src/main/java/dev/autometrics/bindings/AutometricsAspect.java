@@ -83,7 +83,13 @@ public class AutometricsAspect {
         String fullFunctionName = module + "." + className + "." + function;
 
         var concurrencyGauge = findGaugeForFunction(fullFunctionName, module);
-        Timer timer = registry.timer("function.calls.duration", "function", fullFunctionName, "module", module);
+        var timer = Timer.builder("function.calls.duration")
+                .sla()
+                .tag("function", fullFunctionName)
+                .tag("module", module)
+                .publishPercentileHistogram()
+                .publishPercentiles()
+                .register(registry);
         concurrencyGauges.get(concurrencyGauge).incrementAndGet();
         return timer.record(() -> {
             try {
