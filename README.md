@@ -10,7 +10,7 @@ To add autometrics as a dependency
 <dependency>
   <groupId>com.autometrics.bindings</groupId>
   <artifactId>autometricsj</artifactId>
-  <version>1.2</version>
+  <version>1.3</version>
 </dependency>
 ```
 
