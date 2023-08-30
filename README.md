@@ -28,8 +28,8 @@ public String yourMethod() {
 ```
 
 ## Requirements
-This plugin leverages Open Telemetry in order to expose your metrics to Autometrics. If your project does not already 
-have Open Telemetry configured, then these metrics will not be scraped by Prometheus.
+This plugin leverages Micrometer in order to expose your metrics to Autometrics. If your project does not already 
+have Micrometer configured, then these metrics will not be scraped by Prometheus.
 
 In order for this plugin to work with service name and version, you must expose them through your application.yaml file.
 ```yaml
