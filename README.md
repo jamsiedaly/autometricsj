@@ -6,7 +6,7 @@ This is an implementation of Autometrics in Java. This implementation is built w
 
 ## Usage
 To add autometrics as a dependency
-```
+```xml
 <dependency>
   <groupId>com.autometrics.bindings</groupId>
   <artifactId>autometricsj</artifactId>
@@ -15,14 +15,14 @@ To add autometrics as a dependency
 ```
 
 To enable autometrics in your project
-```
+```java
 @SpringBootApplication
 @EnableAutometrics
 public class YourApplication {
 ```
 
 To generate Autometrics metrics for a function method:
-```
+```java
 @Autometrics
 public String yourMethod() {
 ```
