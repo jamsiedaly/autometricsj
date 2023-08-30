@@ -1,11 +1,11 @@
-# autometricsj
+# Autometricsj
 
 Autometrics is an observability micro-framework built for developers. It makes it easy to instrument any function with the most useful metrics: request rate, error rate, and latency. Autometrics uses instrumented function names to generate Prometheus queries so you don’t need to hand-write complicated PromQL.
 
-This is an implementation of Autometrics in Java. This implementation is built with AspectJ and is built to integrate with spring boot and micrometer.
+This is an implementation of Autometrics in Java. This implementation is built with AspectJ and is built to integrate with Spring Boot and Micrometer.
 
 ## Usage
-To add autometrics as a dependency
+To add Autometrics as a dependency
 ```xml
 <dependency>
   <groupId>com.autometrics.bindings</groupId>
@@ -14,7 +14,7 @@ To add autometrics as a dependency
 </dependency>
 ```
 
-To enable autometrics in your project
+To enable Autometrics in your project
 ```java
 @SpringBootApplication
 @EnableAutometrics
