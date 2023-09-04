@@ -8,7 +8,7 @@ This is an implementation of Autometrics in Java. This implementation is built w
 To add Autometrics as a dependency
 ```xml
 <dependency>
-  <groupId>com.autometrics.bindings</groupId>
+  <groupId>dev.autometrics.bindings</groupId>
   <artifactId>autometricsj</artifactId>
   <version>1.3</version>
 </dependency>
