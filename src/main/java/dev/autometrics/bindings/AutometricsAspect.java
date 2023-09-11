@@ -21,7 +21,7 @@ public class AutometricsAspect {
 
     private final MeterRegistry registry;
 
-    private final Map<Gauge, AtomicInteger> concurrencyGauges = new HashMap<>();
+    private final Map<String, AtomicInteger> concurrentCallsForAllFunctions = new HashMap<>();
     public AutometricsAspect(MeterRegistry registry, Environment environment) {
         Properties properties = new Properties();
         try {
@@ -80,9 +80,9 @@ public class AutometricsAspect {
         String function = joinPoint.getSignature().getName();
         String className = joinPoint.getSignature().getDeclaringType().getSimpleName();
         String module = joinPoint.getSignature().getDeclaringType().getPackageName();
-        String fullFunctionName = module + "." + className + "." + function;
+        String fullFunctionName = className == null ? function : className + "." + function;
 
-        var concurrencyGauge = findGaugeForFunction(fullFunctionName, module);
+        var concurrentRequests = findConcurrentRequestsForFunction(fullFunctionName, module);
         var timer = Timer.builder("function.calls.duration")
                 .sla()
                 .tag("function", fullFunctionName)
@@ -90,7 +90,7 @@ public class AutometricsAspect {
                 .publishPercentileHistogram()
                 .publishPercentiles()
                 .register(registry);
-        concurrencyGauges.get(concurrencyGauge).incrementAndGet();
+        concurrentRequests.incrementAndGet();
         return timer.record(() -> {
             try {
                 Object proceed = joinPoint.proceed();
@@ -100,25 +100,24 @@ public class AutometricsAspect {
                 registry.counter("function.calls", "function", fullFunctionName, "module", module, "result", "error").increment();
                 throw new RuntimeException(throwable);
             } finally {
-                concurrencyGauges.get(concurrencyGauge).decrementAndGet();
+                concurrentRequests.decrementAndGet();
             }
         });
     }
 
-    public Gauge findGaugeForFunction(String function, String module) {
-        var potentialGauge = concurrencyGauges.keySet().stream()
-                .filter(gauge -> gauge.getId().getTag("function").equals(function) && gauge.getId().getTag("module").equals(module))
-                .findFirst();
-        if (potentialGauge.isPresent()) {
-            return potentialGauge.get();
+    public AtomicInteger findConcurrentRequestsForFunction(String function, String module) {
+        var name = module + "." + function;
+        var concurrentRequests = concurrentCallsForAllFunctions.get(name);
+        if (concurrentRequests != null) {
+            return concurrentRequests;
         } else {
-            var concurrentCalls = new AtomicInteger(0);
-            var newGauge =Gauge.builder("function.calls.concurrent", () -> concurrentCalls.get())
+            var newConcurrentCalls = new AtomicInteger(0);
+            Gauge.builder("function.calls.concurrent", () -> newConcurrentCalls)
                     .tags("function", function)
                     .tags("module", module)
                     .register(registry);
-            this.concurrencyGauges.put(newGauge, concurrentCalls);
-            return newGauge;
+            this.concurrentCallsForAllFunctions.put(name, newConcurrentCalls);
+            return newConcurrentCalls;
         }
     }
 }
