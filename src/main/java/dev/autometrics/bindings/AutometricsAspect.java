@@ -3,6 +3,8 @@ package dev.autometrics.bindings;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -19,6 +21,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Component
 public class AutometricsAspect {
 
+    private final Log log = LogFactory.getLog(AutometricsAspect.class);
+
     private final MeterRegistry registry;
 
     private final Map<String, AtomicInteger> concurrentCallsForAllFunctions = new HashMap<>();
@@ -27,7 +31,7 @@ public class AutometricsAspect {
         try {
             properties.load(getClass().getClassLoader().getResourceAsStream("git.properties"));
         } catch (Exception e) {
-            System.out.println("Could not load git.properties");
+            log.warn("Could not load git.properties");
         }
 
         Optional<String> gitCommitId = getCommit(properties);
@@ -98,6 +102,7 @@ public class AutometricsAspect {
                 return proceed;
             } catch (Throwable throwable) {
                 registry.counter("function.calls", "function", fullFunctionName, "module", module, "result", "error").increment();
+                log.warn("Error creating metrics for function " + fullFunctionName, throwable);
                 throw new RuntimeException(throwable);
             } finally {
                 concurrentRequests.decrementAndGet();
