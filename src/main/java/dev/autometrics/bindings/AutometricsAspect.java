@@ -26,6 +26,7 @@ public class AutometricsAspect {
     private final MeterRegistry registry;
 
     private final Map<String, AtomicInteger> concurrentCallsForAllFunctions = new HashMap<>();
+
     public AutometricsAspect(MeterRegistry registry, Environment environment) {
         Properties properties = new Properties();
         try {
@@ -41,73 +42,64 @@ public class AutometricsAspect {
 
         this.registry = registry;
         Gauge.builder("build_info", () -> 1.0)
-                .tags("version", version.orElse("unknown"))
-                .tags("commit", gitCommitId.orElse("unknown"))
-                .tags("branch", gitBranch.orElse("unknown"))
-                .tags("service.name", serviceName.orElse("unknown"))
-                .register(registry);
+            .tags("version", version.orElse("unknown"))
+            .tags("commit", gitCommitId.orElse("unknown"))
+            .tags("branch", gitBranch.orElse("unknown"))
+            .tags("service.name", serviceName.orElse("unknown"))
+            .register(registry);
     }
 
     private Optional<String> getServiceName(Environment environment) {
-        return environment.getProperty("spring.application.name") != null ?
-                Optional.ofNullable(environment.getProperty("spring.application.name")) :
-                Optional.empty();
+        return Optional.ofNullable(environment.getProperty("spring.application.name"));
     }
 
     private Optional<String> getCommit(Properties properties) {
-        if (properties.getProperty("git.commit.id.full") != null) {
-            return Optional.of(properties.getProperty("git.commit.id.full"));
-        } else if (properties.getProperty("git.commit.id") != null) {
-            return Optional.of(properties.getProperty("git.commit.id"));
-        } else {
-            return Optional.empty();
-        }
+        return Optional.ofNullable(properties.getProperty("git.commit.id.full"))
+            .or(() -> Optional.ofNullable(properties.getProperty("git.commit.id")));
     }
+
     private Optional<String> getBranch(Properties properties) {
-        if (properties.getProperty("git.branch") != null) {
-            return Optional.of(properties.getProperty("git.branch"));
-        } else {
-            return Optional.empty();
-        }
+        return Optional.ofNullable(properties.getProperty("git.branch"));
     }
 
     private Optional<String> getVersion(Environment environment) {
-        if (environment.getProperty("app.version") != null) {
-            return Optional.ofNullable(environment.getProperty("app.version"));
-        } else {
-            return Optional.empty();
-        }
+        return Optional.ofNullable(environment.getProperty("app.version"));
     }
 
     @Around("@annotation(dev.autometrics.bindings.Autometrics)")
-    public Object methodCallDuration(ProceedingJoinPoint joinPoint) {
+    public Object methodCallDuration(ProceedingJoinPoint joinPoint) throws Throwable {
         String function = joinPoint.getSignature().getName();
         String className = joinPoint.getSignature().getDeclaringType().getSimpleName();
         String module = joinPoint.getSignature().getDeclaringType().getPackageName();
         String fullFunctionName = className == null ? function : className + "." + function;
 
         var concurrentRequests = findConcurrentRequestsForFunction(fullFunctionName, module);
-        var timer = Timer.builder("function.calls.duration")
-                .sla()
-                .tag("function", fullFunctionName)
-                .tag("module", module)
-                .publishPercentileHistogram()
-                .publishPercentiles()
-                .register(registry);
         concurrentRequests.incrementAndGet();
-        return timer.record(() -> {
-            try {
-                Object proceed = joinPoint.proceed();
-                registry.counter( "function.calls","function", fullFunctionName, "module", module, "result", "ok").increment();
-                return proceed;
-            } catch (Throwable throwable) {
-                registry.counter("function.calls", "function", fullFunctionName, "module", module, "result", "error").increment();
-                log.warn("Error creating metrics for function " + fullFunctionName, throwable);
-                throw new RuntimeException(throwable);
-            } finally {
-                concurrentRequests.decrementAndGet();
-            }
-        });
+
+        var sample = Timer.start(registry);
+
+        try {
+            Object proceed = joinPoint.proceed();
+            registry.counter("function.calls", "function", fullFunctionName, "module", module, "result", "ok").increment();
+            return proceed;
+        } catch (Throwable throwable) {
+            registry.counter("function.calls", "function", fullFunctionName, "module", module, "result", "error").increment();
+            log.warn("Error creating metrics for function " + fullFunctionName, throwable);
+
+            throw throwable;
+        } finally {
+            concurrentRequests.decrementAndGet();
+
+            sample.stop(
+                Timer.builder("function.calls.duration")
+                    .sla()
+                    .tag("function", fullFunctionName)
+                    .tag("module", module)
+                    .publishPercentileHistogram()
+                    .publishPercentiles()
+                    .register(registry)
+            );
+        }
     }
 
     public AtomicInteger findConcurrentRequestsForFunction(String function, String module) {
@@ -118,9 +110,9 @@ public class AutometricsAspect {
         } else {
             var newConcurrentCalls = new AtomicInteger(0);
             Gauge.builder("function.calls.concurrent", () -> newConcurrentCalls)
-                    .tags("function", function)
-                    .tags("module", module)
-                    .register(registry);
+                .tags("function", function)
+                .tags("module", module)
+                .register(registry);
             this.concurrentCallsForAllFunctions.put(name, newConcurrentCalls);
             return newConcurrentCalls;
         }
